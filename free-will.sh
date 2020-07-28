@@ -15,18 +15,13 @@ done
 
 # Get standard environment variables
 PRGDIR=`dirname "$PRG"`
-echo "PRGDIR" $PRGDIR
 
 if [ -z "$JAVA_HOME" -a -z "$JRE_HOME" ]; then
   JAVA_PATH=`which java 2>/dev/null`
   if [ "x$JAVA_PATH" != "x" ]; then
     JAVA_PATH=`dirname $JAVA_PATH 2>/dev/null`
+    JAVA_HOME=`dirname $JAVA_PATH 2>/dev/null`
     JRE_HOME=`dirname $JAVA_PATH 2>/dev/null`
-  fi
-  if [ "x$JRE_HOME" = "x" ]; then
-    if [ -x /usr/bin/java ]; then
-      JRE_HOME=/usr
-    fi
   fi
   if [ -z "$JAVA_HOME" -a -z "$JRE_HOME" ]; then
     echo "Neither the JAVA_HOME nor the JRE_HOME environment variable is defined"
@@ -34,21 +29,13 @@ if [ -z "$JAVA_HOME" -a -z "$JRE_HOME" ]; then
     exit 1
   fi
 fi
-if [ -z "$JRE_HOME" ]; then
-  JRE_HOME="$JAVA_HOME"
-fi
-
-echo "JAVA_HOME" $JAVA_HOME
-echo "JRE_HOME" $JRE_HOME
 
 # Set standard commands for invoking Java, if not already set.
 if [ -z "$_RUNJAVA" ]; then
   _RUNJAVA="$JRE_HOME"/bin/java
 fi
 
-echo "_RUNJAVA" $_RUNJAVA
-
-[ -z "$FREE_WILL_PID" ] && FREE_WILL_PID="/root/free-will/free-will.pid"
+[ -z "$FREE_WILL_PID" ] && FREE_WILL_PID="$PRGDIR"/free-will.pid
 
 JAVA_OPTS="$JAVA_OPTS"
 
@@ -70,7 +57,7 @@ if [ "$1" = "start" ] ; then
             ps -f -p $PID
             exit 1
           else
-            echo "Removing/clearing stale PID file."
+            echo "removing/clearing stale PID file."
             rm -f "$FREE_WILL_PID" >/dev/null 2>&1
             if [ $? != 0 ]; then
               if [ -w "$FREE_WILL_PID" ]; then
@@ -99,13 +86,12 @@ if [ "$1" = "start" ] ; then
 
   shift
 
-  eval $_NOHUP $JAVA_OPTS \
-        -classpath "\"$CLASSPATH\"" \
-        pedro.abundio.wang.free.will.server.FreeWillServer "$@" start \
-        2>&1 "&"
+  eval $_NOHUP "\"$_RUNJAVA\"" $JAVA_OPTS \
+    -jar free-will.jar \
+    2>&1 "&"
 
-  if [ ! -z "$CATALINA_PID" ]; then
-    echo $! > "$CATALINA_PID"
+  if [ ! -z "$FREE_WILL_PID" ]; then
+    echo $! > "$FREE_WILL_PID"
   fi
 
   echo "free will started."
@@ -115,15 +101,8 @@ elif [ "$1" = "stop" ]; then
   shift
 
   SLEEP=5
-  if [ ! -z "$1" ]; then
-    echo $1 | grep "[^0-9]" >/dev/null 2>&1
-    if [ $? -gt 0 ]; then
-      SLEEP=$1
-      shift
-    fi
-  fi
-
   FORCE=0
+
   if [ "$1" = "-force" ]; then
     shift
     FORCE=1
@@ -141,14 +120,10 @@ elif [ "$1" = "stop" ]; then
         echo "PID file is empty and has been ignored."
       fi
     else
-      echo "\$FREE_WILL_PID was set but the specified file does not exist. Is Tomcat running? Stop aborted."
+      echo "\$FREE_WILL_PID was set but the specified file does not exist. Is free will running? Stop aborted."
       exit 1
     fi
   fi
-
-  eval "\"$_RUNJAVA\"" $JAVA_OPTS \
-    -classpath "\"$CLASSPATH\"" \
-    pedro.abundio.wang.free.will.server.FreeWillServer "$@" stop
 
   # stop failed. Shutdown port disabled? Try a normal kill.
   if [ $? != 0 ]; then
@@ -167,7 +142,7 @@ elif [ "$1" = "stop" ]; then
           if [ $? != 0 ]; then
             if [ -w "$FREE_WILL_PID" ]; then
               cat /dev/null > "$FREE_WILL_PID"
-              # If Tomcat has stopped don't try and force a stop with an empty PID file
+              # If free will has stopped don't try and force a stop with an empty PID file
               FORCE=0
             else
               echo "The PID file could not be removed or cleared."
@@ -180,7 +155,7 @@ elif [ "$1" = "stop" ]; then
           sleep 1
         fi
         if [ $SLEEP -eq 0 ]; then
-          echo "Tomcat did not stop in time."
+          echo "free will did not stop in time."
           if [ $FORCE -eq 0 ]; then
             echo "PID file was not removed."
           fi
@@ -199,7 +174,7 @@ elif [ "$1" = "stop" ]; then
     else
       if [ -f "$FREE_WILL_PID" ]; then
         PID=`cat "$FREE_WILL_PID"`
-        echo "Killing Tomcat with the PID: $PID"
+        echo "Killing free will with the PID: $PID"
         kill -9 $PID
         while [ $KILL_SLEEP_INTERVAL -ge 0 ]; do
             kill -0 `cat "$FREE_WILL_PID"` >/dev/null 2>&1
@@ -212,7 +187,7 @@ elif [ "$1" = "stop" ]; then
                         echo "The PID file could not be removed."
                     fi
                 fi
-                echo "The Tomcat process has been killed."
+                echo "The free will process has been killed."
                 break
             fi
             if [ $KILL_SLEEP_INTERVAL -gt 0 ]; then
@@ -221,7 +196,7 @@ elif [ "$1" = "stop" ]; then
             KILL_SLEEP_INTERVAL=`expr $KILL_SLEEP_INTERVAL - 1 `
         done
         if [ $KILL_SLEEP_INTERVAL -lt 0 ]; then
-            echo "Tomcat has not been killed completely yet. The process might be waiting on some system call or might be UNINTERRUPTIBLE."
+            echo "free will has not been killed completely yet. The process might be waiting on some system call or might be UNINTERRUPTIBLE."
         fi
       fi
     fi
