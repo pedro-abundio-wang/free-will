@@ -6,8 +6,11 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.socksx.v5.*;
 import io.netty.util.ReferenceCountUtil;
+import org.apache.log4j.Logger;
 
 public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
+
+    private static final Logger log = Logger.getLogger(Socks5CommandRequestHandler.class);
 
     private EventLoopGroup bossGroup;
 
@@ -32,16 +35,17 @@ public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
                             .handler(new ChannelInitializer<SocketChannel>() {
                                 @Override
                                 protected void initChannel(SocketChannel ch) throws Exception {
-                                    ch.pipeline().addLast(new Dest2ClientHandler(clientChannelContext));
+                                    ch.pipeline().addLast(new Send2RemoteHandler(clientChannelContext));
                                 }
                             });
 
+                    log.debug("remote address = " + request.dstAddr() +  " ,remote port = " + request.dstPort());
                     ChannelFuture future = bootstrap.connect(request.dstAddr(), request.dstPort());
 
                     future.addListener(new ChannelFutureListener() {
                         public void operationComplete(final ChannelFuture future) throws Exception {
                             if(future.isSuccess()) {
-                                clientChannelContext.pipeline().addLast(new Client2DestHandler(future));
+                                clientChannelContext.pipeline().addLast(new Back2ClientHandler(future));
                                 Socks5CommandResponse commandResponse = new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
                                 clientChannelContext.writeAndFlush(commandResponse);
                             } else {
@@ -66,11 +70,11 @@ public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
 
     }
 
-    private static class Dest2ClientHandler extends ChannelInboundHandlerAdapter {
+    private static class Send2RemoteHandler extends ChannelInboundHandlerAdapter {
 
         private ChannelHandlerContext clientChannelContext;
 
-        public Dest2ClientHandler(ChannelHandlerContext clientChannelContext) {
+        public Send2RemoteHandler(ChannelHandlerContext clientChannelContext) {
             this.clientChannelContext = clientChannelContext;
         }
 
@@ -85,11 +89,11 @@ public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    private static class Client2DestHandler extends ChannelInboundHandlerAdapter {
+    private static class Back2ClientHandler extends ChannelInboundHandlerAdapter {
 
         private ChannelFuture destChannelFuture;
 
-        public Client2DestHandler(ChannelFuture destChannelFuture) {
+        public Back2ClientHandler(ChannelFuture destChannelFuture) {
             this.destChannelFuture = destChannelFuture;
         }
 
