@@ -87,7 +87,7 @@ if [ "$1" = "start" ] ; then
   shift
 
   eval $_NOHUP "\"$_RUNJAVA\"" $JAVA_OPTS \
-    -jar free-will.jar \
+    -jar target/free-will.jar \
     2>&1 "&"
 
   if [ ! -z "$FREE_WILL_PID" ]; then
