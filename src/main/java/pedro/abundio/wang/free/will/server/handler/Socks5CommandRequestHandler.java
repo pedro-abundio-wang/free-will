@@ -39,7 +39,7 @@ public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
                                 }
                             });
 
-                    log.debug("remote address = " + request.dstAddr() +  " ,remote port = " + request.dstPort());
+                    log.info("connect to remote address = " + request.dstAddr() +  " ,remote port = " + request.dstPort());
                     ChannelFuture future = bootstrap.connect(request.dstAddr(), request.dstPort());
 
                     future.addListener(new ChannelFutureListener() {
@@ -55,9 +55,11 @@ public class Socks5CommandRequestHandler extends ChannelInboundHandlerAdapter {
                         }
                     });
                 } else {
+                    log.info("dispatch none-connect request, request type = " + request.type());
                     clientChannelContext.fireChannelRead(msg);
                 }
             } else {
+                log.info("Msg is not a DefaultSocks5CommandRequest instance.");
                 release = false;
                 clientChannelContext.fireChannelRead(msg);
             }
