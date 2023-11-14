@@ -11,7 +11,7 @@ import io.netty.handler.logging.LoggingHandler;
 
 public class SocketChannelInitializer extends ChannelInitializer<NioSocketChannel> {
 
-  private RequestMessagePendingCenter requestMessagePendingCenter;
+  private final RequestMessagePendingCenter requestMessagePendingCenter;
 
   public SocketChannelInitializer(RequestMessagePendingCenter requestMessagePendingCenter) {
     this.requestMessagePendingCenter = requestMessagePendingCenter;
